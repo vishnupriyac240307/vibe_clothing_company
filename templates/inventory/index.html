@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% block title %}Inventory Management{% endblock %}
+{% block breadcrumb %}Inventory{% endblock %}
+
+{% block content %}
+<div class="inventory-container">
+    <!-- Header Controls -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Inventory Management</h3>
+            <p class="text-muted small mb-0">Manage raw materials, track stock thresholds, and record inventory transactions.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#recordTxnModal">
+                <i class="fa-solid fa-right-left me-2"></i>Record Transaction
+            </button>
+            {% if current_user.role in ['admin', 'manager'] %}
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
+                <i class="fa-solid fa-plus me-2"></i>Add Material
+            </button>
+            {% endif %}
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fa-solid fa-download me-2"></i>Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='inventory', format='pdf') }}"><i class="fa-solid fa-file-pdf me-2 text-danger"></i>Export PDF</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='inventory', format='excel') }}"><i class="fa-solid fa-file-excel me-2 text-success"></i>Export Excel</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='inventory', format='csv') }}"><i class="fa-solid fa-file-csv me-2 text-info"></i>Export CSV</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 bg-white">
+                <span class="text-muted small">Total Materials</span>
+                <h4 class="fw-bold text-dark mb-0">{{ total_items }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 bg-white">
+                <span class="text-muted small">Total Valuation (₹)</span>
+                <h4 class="fw-bold text-primary mb-0">{{ formatted_total_value }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 bg-white">
+                <span class="text-muted small">Low Stock Items</span>
+                <h4 class="fw-bold text-warning mb-0">{{ low_stock }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 bg-white">
+                <span class="text-muted small">Critical Stock Items</span>
+                <h4 class="fw-bold text-danger mb-0">{{ critical_stock }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <form method="GET" action="{{ url_for('inventory.index') }}" class="row g-2 align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" name="search" placeholder="Search material name, code, MAT-XXXX..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="category" onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="status" onchange="this.form.submit()">
+                        <option value="">All Stock Statuses</option>
+                        <option value="ok" {% if selected_status == 'ok' %}selected{% endif %}>OK (Healthy)</option>
+                        <option value="low" {% if selected_status == 'low' %}selected{% endif %}>LOW (Below Min)</option>
+                        <option value="critical" {% if selected_status == 'critical' %}selected{% endif %}>CRITICAL (Severe)</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark w-100">Filter</button>
+                    <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary" title="Reset Filters"><i class="fa-solid fa-rotate-left"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Inventory Data Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Material ID</th>
+                            <th>Material Name</th>
+                            <th>Category</th>
+                            <th>Stock Quantity</th>
+                            <th>Color</th>
+                            <th>Min / Critical</th>
+                            <th>Supplier</th>
+                            <th>Unit Cost (₹)</th>
+                            <th>Total Value (₹)</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if materials %}
+                            {% for m in materials %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ m.material_id }}</td>
+                                <td>
+                                    <span class="fw-bold text-dark">{{ m.name }}</span>
+                                    <span class="d-block text-muted micro">Code: {{ m.code }}</span>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">{{ m.category }}</span></td>
+                                <td>
+                                    <span class="fw-bold {% if m.status == 'CRITICAL' %}text-danger{% elif m.status == 'LOW' %}text-warning{% else %}text-dark{% endif %}">
+                                        {{ m.quantity }} {{ m.unit }}
+                                    </span>
+                                </td>
+                                <td>{{ m.color or 'N/A' }}</td>
+                                <td>
+                                    <span class="small text-muted">{{ m.minimum_level }} / <strong class="text-danger">{{ m.critical_level }}</strong></span>
+                                </td>
+                                <td>{{ m.supplier.supplier_name if m.supplier else 'N/A' }}</td>
+                                <td>₹{{ "%.2f"|format(m.unit_cost) }}</td>
+                                <td class="fw-semibold">₹{{ "%.2f"|format(m.total_value) }}</td>
+                                <td>
+                                    {% if m.status == 'OK' %}
+                                        <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-circle-check me-1"></i>OK</span>
+                                    {% elif m.status == 'LOW' %}
+                                        <span class="badge bg-warning-subtle text-warning"><i class="fa-solid fa-triangle-exclamation me-1"></i>LOW</span>
+                                    {% else %}
+                                        <span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-circle-exclamation me-1"></i>CRITICAL</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#recordTxnModal" data-material-id="{{ m.material_id }}" data-material-name="{{ m.name }}">
+                                        <i class="fa-solid fa-right-left"></i>
+                                    </button>
+                                    {% if current_user.role in ['admin', 'manager'] %}
+                                    <button class="btn btn-sm btn-outline-secondary ms-1" data-bs-toggle="modal" data-bs-target="#editMaterialModal{{ m.id }}">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if current_user.role == 'admin' %}
+                                    <form action="{{ url_for('inventory.delete_material', material_id=m.material_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete {{ m.name }}?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger ms-1"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <!-- Edit Material Modal -->
+                            <div class="modal fade" id="editMaterialModal{{ m.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content border-0 shadow">
+                                        <div class="modal-header bg-light">
+                                            <h5 class="modal-title fw-bold">Edit Material — {{ m.material_id }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form action="{{ url_for('inventory.edit_material', material_id=m.material_id) }}" method="POST">
+                                            <div class="modal-body">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Material Name</label>
+                                                        <input type="text" class="form-control" name="name" value="{{ m.name }}" required>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Material Code</label>
+                                                        <input type="text" class="form-control" name="code" value="{{ m.code }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-semibold">Category</label>
+                                                        <input type="text" class="form-control" name="category" value="{{ m.category }}" required>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-semibold">Unit</label>
+                                                        <select class="form-select" name="unit">
+                                                            {% for u in ['Meter', 'KG', 'PCS', 'Roll', 'Liter', 'Box'] %}
+                                                            <option value="{{ u }}" {% if m.unit == u %}selected{% endif %}>{{ u }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-semibold">Unit Cost (₹)</label>
+                                                        <input type="number" step="0.01" class="form-control" name="unit_cost" value="{{ m.unit_cost }}" required>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-semibold">Minimum Level</label>
+                                                        <input type="number" step="0.1" class="form-control" name="minimum_level" value="{{ m.minimum_level }}" required>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-semibold">Reorder Level</label>
+                                                        <input type="number" step="0.1" class="form-control" name="reorder_level" value="{{ m.reorder_level }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-semibold">Critical Level</label>
+                                                        <input type="number" step="0.1" class="form-control" name="critical_level" value="{{ m.critical_level }}" required>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Supplier</label>
+                                                        <select class="form-select" name="supplier_id">
+                                                            <option value="">None</option>
+                                                            {% for sup in suppliers %}
+                                                            <option value="{{ sup.supplier_id }}" {% if m.supplier_id == sup.supplier_id %}selected{% endif %}>{{ sup.supplier_name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Storage Location</label>
+                                                        <input type="text" class="form-control" name="storage_location" value="{{ m.storage_location }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer border-0">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="11" class="text-center py-5 text-muted">
+                                    <i class="fa-solid fa-boxes-stacked display-4 mb-3 d-block text-secondary"></i>
+                                    <h5>No inventory materials found</h5>
+                                    <p class="small">Try adjusting search filters or add a new material.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Material Modal -->
+<div class="modal fade" id="addMaterialModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus me-2 text-primary"></i>Add New Raw Material</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('inventory.add_material') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Material Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" placeholder="e.g. Cotton Fabric" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Material Code</label>
+                            <input type="text" class="form-control" name="code" placeholder="e.g. MAT-COT-01">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" name="category" required>
+                                <option value="Fabric" selected>Fabric</option>
+                                <option value="Trims">Trims</option>
+                                <option value="Accessories">Accessories</option>
+                                <option value="Chemicals">Chemicals</option>
+                                <option value="Packaging">Packaging</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Initial Quantity</label>
+                            <input type="number" step="0.1" class="form-control" name="quantity" value="0.0" min="0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Measurement Unit</label>
+                            <select class="form-select" name="unit">
+                                <option value="Meter" selected>Meter</option>
+                                <option value="KG">KG</option>
+                                <option value="PCS">PCS</option>
+                                <option value="Roll">Roll</option>
+                                <option value="Liter">Liter</option>
+                                <option value="Box">Box</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Unit Cost (₹) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" name="unit_cost" placeholder="250.00" min="0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Minimum Stock Level</label>
+                            <input type="number" step="0.1" class="form-control" name="minimum_level" value="100.0" min="0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Critical Stock Level</label>
+                            <input type="number" step="0.1" class="form-control" name="critical_level" value="50.0" min="0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Supplier</label>
+                            <select class="form-select" name="supplier_id">
+                                <option value="">Select Supplier</option>
+                                {% for sup in suppliers %}
+                                <option value="{{ sup.supplier_id }}">{{ sup.supplier_name }} ({{ sup.supplier_id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Color / Specification</label>
+                            <input type="text" class="form-control" name="color" placeholder="e.g. Super White">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description & Notes</label>
+                            <textarea class="form-control" name="description" rows="2" placeholder="Optional details about GSM, weave type, supplier batch specs..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Create Material</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Record Inventory Transaction Modal -->
+<div class="modal fade" id="recordTxnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-right-left me-2"></i>Record Inventory Movement</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('inventory.record_transaction') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Material <span class="text-danger">*</span></label>
+                        <select class="form-select" name="material_id" id="txnMaterialSelect" required>
+                            <option value="">Choose Material...</option>
+                            {% for m in materials %}
+                            <option value="{{ m.material_id }}">{{ m.name }} ({{ m.material_id }}) — Current: {{ m.quantity }} {{ m.unit }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Transaction Type <span class="text-danger">*</span></label>
+                        <select class="form-select" name="transaction_type" required>
+                            <option value="Stock In" selected>Stock In (Increase Stock)</option>
+                            <option value="Stock Out">Stock Out (Decrease Stock)</option>
+                            <option value="Purchase Receipt">Purchase Receipt</option>
+                            <option value="Production Consumption">Production Consumption</option>
+                            <option value="Production Return">Production Return</option>
+                            <option value="Adjustment">Adjustment (Exact Quantity Reset)</option>
+                            <option value="Damaged">Damaged / Wastage</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                        <input type="number" step="0.1" class="form-control" name="quantity" placeholder="Enter quantity" min="0.01" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Reference (PO / Order / Note)</label>
+                        <input type="text" class="form-control" name="reference" placeholder="e.g. PO-9982 or ORD-0001">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Remarks</label>
+                        <textarea class="form-control" name="remarks" rows="2" placeholder="Reason for inventory movement..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-2"></i>Save Transaction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $('#recordTxnModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var materialId = button.data('material-id');
+        if (materialId) {
+            $('#txnMaterialSelect').val(materialId);
+        }
+    });
+</script>
+{% endblock %}

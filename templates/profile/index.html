@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block breadcrumb %}Profile{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4 text-center border-bottom">
+                    <div class="avatar-circle-lg mx-auto mb-3">
+                        {{ user.username[0] | upper }}
+                    </div>
+                    <h4 class="fw-bold text-dark mb-1">{{ user.username }}</h4>
+                    <p class="text-muted small mb-2">{{ user.email }}</p>
+                    <span class="badge badge-role-{{ user.role }} px-3 py-2 fs-6">{{ user.role | upper }} ROLE</span>
+                </div>
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-dark mb-3">Account Details</h5>
+                    <form action="{{ url_for('profile.index') }}" method="POST">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">User ID</label>
+                                <input type="text" class="form-control bg-light" value="{{ user.user_id }}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Username</label>
+                                <input type="text" class="form-control bg-light" value="{{ user.username }}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email Address</label>
+                                <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone Number</label>
+                                <input type="text" class="form-control" name="phone" value="{{ user.phone }}">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="fw-bold text-dark mb-3">Change Password</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Current Password</label>
+                                <input type="password" class="form-control" name="current_password">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">New Password</label>
+                                <input type="password" class="form-control" name="new_password" minlength="6">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Confirm New Password</label>
+                                <input type="password" class="form-control" name="confirm_password" minlength="6">
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary shadow-sm"><i class="fa-solid fa-save me-2"></i>Update Profile</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

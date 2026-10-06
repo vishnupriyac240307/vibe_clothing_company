@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Customers Directory{% endblock %}
+{% block breadcrumb %}Customers{% endblock %}
+
+{% block content %}
+<div class="customers-container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Customers Directory</h3>
+            <p class="text-muted small mb-0">Manage apparel retail, e-commerce, and wholesale client profiles.</p>
+        </div>
+        {% if current_user.role in ['admin', 'manager'] %}
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+            <i class="fa-solid fa-plus me-2"></i>Add Customer
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Customer Cards Grid -->
+    <div class="row g-4">
+        {% for c in customers %}
+        <div class="col-xl-4 col-lg-6">
+            <div class="card customer-card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <img src="{{ c.logo_url }}" class="rounded-circle shadow-sm" style="width: 54px; height: 54px; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ c.company_name }}&background=0f172a&color=ffffff'">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0">{{ c.company_name }}</h5>
+                            <span class="badge bg-light text-dark border">{{ c.customer_id }}</span>
+                            <span class="badge bg-info-subtle text-info ms-1">{{ c.customer_type }}</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded mb-3">
+                        <div class="row text-center g-2">
+                            <div class="col-4">
+                                <span class="text-muted micro d-block">Orders</span>
+                                <span class="fw-bold text-dark fs-6">{{ c.total_orders }}</span>
+                            </div>
+                            <div class="col-4">
+                                <span class="text-muted micro d-block">Active</span>
+                                <span class="fw-bold text-warning fs-6">{{ c.active_orders }}</span>
+                            </div>
+                            <div class="col-4">
+                                <span class="text-muted micro d-block">Total Spend</span>
+                                <span class="fw-bold text-primary fs-6">{{ c.formatted_total_spend }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="small text-muted mb-3">
+                        <div><i class="fa-regular fa-user me-2"></i>Contact: {{ c.contact_person or 'N/A' }}</div>
+                        <div><i class="fa-regular fa-envelope me-2"></i>Email: {{ c.email or 'N/A' }}</div>
+                        <div><i class="fa-solid fa-phone me-2"></i>Phone: {{ c.phone or 'N/A' }}</div>
+                        <div><i class="fa-solid fa-location-dot me-2"></i>GST: {{ c.gst_id or 'N/A' }}</div>
+                    </div>
+
+                    <a href="{{ url_for('customers.detail', customer_id=c.customer_id) }}" class="btn btn-outline-primary w-100 btn-sm">
+                        View Order & Shipment History <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5 text-muted">
+            <i class="fa-solid fa-users display-4 mb-3 d-block text-secondary"></i>
+            <h5>No customer records found</h5>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus me-2 text-primary"></i>Add New Customer</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('customers.add_customer') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="company_name" placeholder="e.g. Flipkart" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Customer Type</label>
+                            <select class="form-select" name="customer_type">
+                                <option value="Wholesale">Wholesale</option>
+                                <option value="E-Commerce" selected>E-Commerce</option>
+                                <option value="Retail Chain">Retail Chain</option>
+                                <option value="Export">Export</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Contact Person</label>
+                            <input type="text" class="form-control" name="contact_person" placeholder="e.g. Vikram Sethi">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email Address</label>
+                            <input type="email" class="form-control" name="email" placeholder="vendor@flipkart.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Phone Number</label>
+                            <input type="text" class="form-control" name="phone" placeholder="+91 98765 43210">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">GST / Tax ID</label>
+                            <input type="text" class="form-control" name="gst_id" placeholder="29AABCF1234F1Z1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">City</label>
+                            <input type="text" class="form-control" name="city" placeholder="Bengaluru">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">State</label>
+                            <input type="text" class="form-control" name="state" placeholder="Karnataka">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Country</label>
+                            <input type="text" class="form-control" name="country" value="India">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Save Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

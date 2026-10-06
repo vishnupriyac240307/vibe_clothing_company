@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Sign In{% endblock %}
+
+{% block auth_layout %}
+<video
+    class="background-video"
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="metadata"
+    aria-hidden="true">
+    <source src="{{ url_for('static', filename='videos/login-background.mp4') }}" type="video/mp4">
+</video>
+
+<div class="video-overlay"></div>
+
+<div class="auth-wrapper">
+    <div class="auth-card shadow-lg">
+
+        <div class="auth-header text-center">
+            <div class="brand-logo mb-3">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Vibe Clothing Logo" style="height: 64px; width: auto; object-fit: contain;">
+            </div>
+
+            <h3 class="fw-bold mb-1">VIBE CLOTHING COMPANY</h3>
+            <p class="text-muted small">Smart Production & Manufacturing Management System</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('auth.login') }}" method="POST" class="auth-form mt-4" id="loginForm">
+            <div class="mb-3">
+                <label for="username" class="form-label fw-semibold">Username or Email</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-regular fa-user text-muted"></i></span>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="e.g. admin or manager" required autofocus>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="password" class="form-label fw-semibold mb-0">Password</label>
+                    <a href="#" class="small text-decoration-none text-primary" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">Forgot password?</a>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-lock text-muted"></i></span>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                        <i class="fa-regular fa-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                <label class="form-check-label text-muted small" for="remember">
+                    Remember my login session
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm font-weight-bold" id="btnLogin">
+                <i class="fa-solid fa-right-to-bracket me-2"></i>Sign In to ERP
+            </button>
+        </form>
+
+        <div class="auth-footer text-center mt-4 pt-3 border-top">
+            <p class="text-muted small mb-0">Don't have an account? <a href="{{ url_for('auth.register') }}" class="fw-bold text-primary text-decoration-none">Create Account</a></p>
+        </div>
+
+        <div class="demo-credentials mt-4 p-3 bg-light rounded border">
+            <h6 class="fw-bold mb-2 text-dark"><i class="fa-solid fa-key text-warning me-2"></i>Demo Access Credentials:</h6>
+            <div class="d-flex justify-content-between mb-1 small">
+                <span><strong>Admin:</strong> admin / admin123</span>
+                <span class="badge bg-danger">Full Access</span>
+            </div>
+            <div class="d-flex justify-content-between mb-1 small">
+                <span><strong>Manager:</strong> manager / manager123</span>
+                <span class="badge bg-primary">Operations</span>
+            </div>
+            <div class="d-flex justify-content-between small">
+                <span><strong>Staff:</strong> staff / staff123</span>
+                <span class="badge bg-secondary">Read/Entry</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Reset Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Please contact your System Administrator to reset your password or enter your registered email below:</p>
+                <input type="email" class="form-control" placeholder="user@vibeclothing.com">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="alert('Password reset instructions sent to administrator.')" data-bs-dismiss="modal">Request Reset</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

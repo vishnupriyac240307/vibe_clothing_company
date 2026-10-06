@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block breadcrumb %}User Management{% endblock %}
+
+{% block content %}
+<div class="users-container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">User Management & Role-Based Access</h3>
+            <p class="text-muted small mb-0">Admin controls for staff accounts, role modifications, and authorization permissions.</p>
+        </div>
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="fa-solid fa-user-plus me-2"></i>Create New User
+        </button>
+    </div>
+
+    <!-- Active Directory & Archive Tabs -->
+    <ul class="nav nav-tabs border-bottom-0 mb-3" id="userDirectoryTabs">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'active' %}active fw-bold{% endif %}" href="{{ url_for('users.index', tab='active') }}">
+                <i class="fa-solid fa-user-check me-2 text-success"></i>Active Directory <span class="badge bg-success ms-1">{{ active_count }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'archived' %}active fw-bold{% endif %}" href="{{ url_for('users.index', tab='archived') }}">
+                <i class="fa-solid fa-user-slash me-2 text-secondary"></i>Deactivated Archive <span class="badge bg-secondary ms-1">{{ archived_count }}</span>
+            </a>
+        </li>
+    </ul>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username & Email</th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Created Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ u.user_id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-circle-sm">
+                                        {{ u.username[0] | upper }}
+                                    </div>
+                                    <div>
+                                        <span class="fw-bold text-dark d-block">{{ u.username }}</span>
+                                        <span class="micro text-muted">{{ u.email }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ u.phone or 'N/A' }}</td>
+                            <td>
+                                <span class="badge badge-role-{{ u.role }}">{{ u.role | upper }}</span>
+                            </td>
+                            <td>
+                                {% if u.is_active %}
+                                <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-circle me-1"></i>Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary"><i class="fa-solid fa-ban me-1"></i>Deactivated</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">{{ u.last_login }}</td>
+                            <td class="small text-muted">{{ u.created_at[:10] }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#changeRoleModal{{ u.id }}" title="Change Role">
+                                    <i class="fa-solid fa-user-gear"></i>
+                                </button>
+                                {% if u.user_id != current_user.id %}
+                                <form action="{{ url_for('users.toggle_status', user_id=u.user_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Change status for user {{ u.username }}?')">
+                                    <button type="submit" class="btn btn-sm {% if u.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
+                                        {% if u.is_active %}<i class="fa-solid fa-user-slash" title="Deactivate User"></i>{% else %}<i class="fa-solid fa-user-check" title="Activate User"></i>{% endif %}
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+
+                        <!-- Change Role Modal -->
+                        <div class="modal fade" id="changeRoleModal{{ u.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-header bg-dark text-white">
+                                        <h5 class="modal-title fw-bold">Change Role — {{ u.username }}</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form action="{{ url_for('users.change_role', user_id=u.user_id) }}" method="POST">
+                                        <div class="modal-body">
+                                            <label class="form-label fw-semibold">Select New Role</label>
+                                            <select class="form-select" name="role" required>
+                                                <option value="staff" {% if u.role == 'staff' %}selected{% endif %}>Staff (Operational Access Only)</option>
+                                                <option value="manager" {% if u.role == 'manager' %}selected{% endif %}>Manager (Full Operations & Approvals)</option>
+                                                <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin (Unrestricted System Access)</option>
+                                            </select>
+                                        </div>
+                                        <div class="modal-footer border-0">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Save Role</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <tr><td colspan="8" class="text-center py-5 text-muted">No users found in this directory tab.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus me-2 text-primary"></i>Create New User Account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('users.add_user') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="username" placeholder="e.g. john_doe" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" name="email" placeholder="john@vibeclothing.com" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phone Number</label>
+                        <input type="text" class="form-control" name="phone" placeholder="+91 98765 43210">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">User Role <span class="text-danger">*</span></label>
+                        <select class="form-select" name="role" required>
+                            <option value="staff" selected>Staff</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" name="password" minlength="6" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

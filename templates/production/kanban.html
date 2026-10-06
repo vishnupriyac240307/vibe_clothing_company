@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Production Orders{% endblock %}
+{% block page_title %}Production Orders Workflow{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2 class="page-title">Production Orders Workflow</h2>
+        <p class="page-desc">Manage order lifecycle, BOM material readiness verification, and real-time inventory stock deduction</p>
+    </div>
+    {% if session.get('user_role') in ['Admin', 'Supervisor', 'Manager'] %}
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addOrderModal">
+        <i class="fa-solid fa-plus me-1"></i> New Production Order
+    </button>
+    {% endif %}
+</div>
+
+<!-- KANBAN BOARD -->
+<div class="kanban-grid">
+    <!-- 1. PLANNED -->
+    <div class="kanban-col">
+        <div class="kanban-col-header">
+            <span><i class="fa-solid fa-calendar-check text-secondary me-1"></i> PLANNED</span>
+            <span class="badge bg-secondary rounded-pill">{{ planned_orders|length }}</span>
+        </div>
+        {% for o in planned_orders %}
+        <div class="kanban-card">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold text-dark">{{ o.order_number }}</span>
+                <span class="badge {% if o.priority in ['Urgent', 'High'] %}bg-danger{% else %}bg-secondary{% endif %}">{{ o.priority }}</span>
+            </div>
+            <div>
+                <div class="fw-semibold text-dark fs-6">{{ o.product_name }}</div>
+                <small class="text-muted"><i class="fa-solid fa-building me-1"></i> Customer: {{ o.customer_name }}</small>
+            </div>
+            <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded my-2">
+                <small class="fw-bold">Target Qty: {{ o.quantity }} pcs</small>
+                <span class="badge-custom {{ o.readiness.status|badge_class }}">{{ o.readiness.readiness_percent }}% {{ o.readiness.status }}</span>
+            </div>
+            {% if o.readiness.missing_count > 0 %}
+            <div class="text-danger mb-2" style="font-size: 0.75rem;">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i> Insufficient material in inventory!
+            </div>
+            {% endif %}
+            <div class="d-flex gap-2">
+                <form action="{{ url_for('production.start_order', order_id=o.id) }}" method="POST" class="w-100">
+                    <button type="submit" class="btn btn-sm btn-primary w-100 fw-semibold"><i class="fa-solid fa-play me-1"></i> Start Production</button>
+                </form>
+                <form action="{{ url_for('production.cancel_order', order_id=o.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel Order {{ o.order_number }}?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel Order"><i class="fa-solid fa-xmark"></i></button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center p-4 text-muted small">No planned orders</div>
+        {% endfor %}
+    </div>
+
+    <!-- 2. IN PROGRESS -->
+    <div class="kanban-col">
+        <div class="kanban-col-header text-info">
+            <span><i class="fa-solid fa-spinner fa-spin me-1"></i> IN PROGRESS</span>
+            <span class="badge bg-info rounded-pill">{{ in_progress_orders|length }}</span>
+        </div>
+        {% for o in in_progress_orders %}
+        <div class="kanban-card" style="border-left: 4px solid var(--info);">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold text-dark">{{ o.order_number }}</span>
+                <span class="badge bg-info">IN PROGRESS</span>
+            </div>
+            <div>
+                <div class="fw-semibold text-dark fs-6">{{ o.product_name }}</div>
+                <small class="text-muted"><i class="fa-solid fa-building me-1"></i> Customer: {{ o.customer_name }}</small>
+            </div>
+            <div class="bg-light p-2 rounded small my-2">
+                <div><i class="fa-solid fa-layer-group text-primary me-1"></i> Quantity: {{ o.quantity }} pcs</div>
+                <div><i class="fa-solid fa-calendar me-1"></i> Started: {{ o.start_date or 'Today' }}</div>
+            </div>
+            <div class="d-flex gap-2">
+                <form action="{{ url_for('production.complete_order', order_id=o.id) }}" method="POST" class="w-100">
+                    <button type="submit" class="btn btn-sm btn-success w-100 fw-semibold"><i class="fa-solid fa-circle-check me-1"></i> Complete Production</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center p-4 text-muted small">No orders in progress</div>
+        {% endfor %}
+    </div>
+
+    <!-- 3. COMPLETED -->
+    <div class="kanban-col">
+        <div class="kanban-col-header text-success">
+            <span><i class="fa-solid fa-circle-check me-1"></i> COMPLETED</span>
+            <span class="badge bg-success rounded-pill">{{ completed_orders|length }}</span>
+        </div>
+        {% for o in completed_orders %}
+        <div class="kanban-card opacity-75">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold text-dark">{{ o.order_number }}</span>
+                <span class="badge bg-success">COMPLETED</span>
+            </div>
+            <div>
+                <div class="fw-semibold text-dark fs-6">{{ o.product_name }}</div>
+                <small class="text-muted">Customer: {{ o.customer_name }}</small>
+            </div>
+            <div class="small text-success fw-semibold mt-2"><i class="fa-solid fa-box-archive me-1"></i> {{ o.quantity }} units added to finished product stock</div>
+        </div>
+        {% else %}
+        <div class="text-center p-4 text-muted small">No completed orders</div>
+        {% endfor %}
+    </div>
+
+    <!-- 4. CANCELLED -->
+    <div class="kanban-col">
+        <div class="kanban-col-header text-muted">
+            <span><i class="fa-solid fa-ban me-1"></i> CANCELLED</span>
+            <span class="badge bg-secondary rounded-pill">{{ cancelled_orders|length }}</span>
+        </div>
+        {% for o in cancelled_orders %}
+        <div class="kanban-card bg-light opacity-50">
+            <div class="fw-bold text-dark">{{ o.order_number }}</div>
+            <div class="small text-muted">{{ o.product_name }} ({{ o.quantity }} pcs)</div>
+        </div>
+        {% else %}
+        <div class="text-center p-4 text-muted small">No cancelled orders</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ADD PRODUCTION ORDER MODAL -->
+{% if session.get('user_role') in ['Admin', 'Supervisor', 'Manager'] %}
+<div class="modal fade" id="addOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Create Production Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('production.add_order') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Finished Product *</label>
+                        <select name="product_id" class="form-select" required>
+                            {% for p in products %}
+                            <option value="{{ p.id }}">{{ p.name }} (SKU: {{ p.sku }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Target Customer</label>
+                        <select name="customer_id" class="form-select">
+                            <option value="">Internal Stock (No Customer)</option>
+                            {% for c in customers %}
+                            <option value="{{ c.id }}">{{ c.company_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Target Quantity *</label>
+                            <input type="number" min="1" name="quantity" value="100" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Priority</label>
+                            <select name="priority" class="form-select">
+                                <option value="Low">Low</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="High">High</option>
+                                <option value="Urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Expected Completion Date</label>
+                        <input type="date" name="expected_completion" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Notes / Production Instructions</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="e.g. Special stitch pattern..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

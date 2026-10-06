@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Factory Analytics{% endblock %}
+{% block breadcrumb %}Factory Analytics{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Factory Analytics & Business Intelligence</h3>
+            <p class="text-muted small mb-0">Production trends, output metrics, material consumption, quality defects, and financial inventory valuations (₹).</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="fa-solid fa-download me-2"></i>Export Report
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='analytics', format='pdf') }}"><i class="fa-solid fa-file-pdf me-2 text-danger"></i>Analytics Report (PDF)</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='analytics', format='excel') }}"><i class="fa-solid fa-file-excel me-2 text-success"></i>Analytics Report (Excel)</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='analytics', format='csv') }}"><i class="fa-solid fa-file-csv me-2 text-info"></i>Analytics Report (CSV)</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='production', format='pdf') }}"><i class="fa-solid fa-industry me-2 text-primary"></i>Production Orders (PDF)</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='inventory', format='excel') }}"><i class="fa-solid fa-boxes-stacked me-2 text-warning"></i>Inventory Valuation (Excel)</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('reports.export', module='quality', format='csv') }}"><i class="fa-solid fa-clipboard-check me-2 text-secondary"></i>Quality Log (CSV)</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Period Filter Pills -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-2 d-flex justify-content-between align-items-center">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-dark active" onclick="loadAnalytics('today', this)">Today</button>
+                <button type="button" class="btn btn-sm btn-outline-dark" onclick="loadAnalytics('7d', this)">Last 7 Days</button>
+                <button type="button" class="btn btn-sm btn-outline-dark" onclick="loadAnalytics('30d', this)">Last 30 Days</button>
+                <button type="button" class="btn btn-sm btn-outline-dark" onclick="loadAnalytics('3m', this)">Last 3 Months</button>
+            </div>
+            <span class="text-muted small d-none d-md-inline"><i class="fa-solid fa-rotate me-1"></i>Live Connected Database Metrics</span>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="row g-4">
+        <!-- 1. Factory Output Over Time -->
+        <div class="col-xl-8 col-lg-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Factory Output Over Time (Units Produced)</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px;">
+                        <canvas id="chartOutputTimeline"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Orders Status Breakdown -->
+        <div class="col-xl-4 col-lg-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-chart-pie me-2 text-warning"></i>Production Status Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px;" class="d-flex justify-content-center">
+                        <canvas id="chartOrderStatus"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Top Products Volume -->
+        <div class="col-xl-6 col-lg-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-chart-column me-2 text-success"></i>Top Products by Target Volume & Stock</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 280px;">
+                        <canvas id="chartTopProducts"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Inventory Valuation by Category (₹) -->
+        <div class="col-xl-6 col-lg-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-indian-rupee-sign me-2 text-info"></i>Raw Inventory Asset Valuation by Category (₹)</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 280px;">
+                        <canvas id="chartInventoryCategory"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Quality Defect Breakdown -->
+        <div class="col-xl-6 col-lg-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-shield-cat me-2 text-danger"></i>Garment Quality Defect Categories</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 280px;">
+                        <canvas id="chartQcDefects"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Customer Spend & Order Breakdown -->
+        <div class="col-xl-6 col-lg-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-users me-2 text-purple"></i>Customer Order Volume & Spend (₹)</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 280px;">
+                        <canvas id="chartCustomerSpend"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        loadAnalyticsPageCharts('30d');
+    });
+
+    function loadAnalytics(period, btn) {
+        $('.btn-group button').removeClass('active');
+        $(btn).addClass('active');
+        loadAnalyticsPageCharts(period);
+    }
+</script>
+{% endblock %}

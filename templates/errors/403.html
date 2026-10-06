@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}403 Access Denied{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+    <i class="fa-solid fa-lock text-danger display-1 mb-3"></i>
+    <h1 class="fw-bold text-dark mb-2">403 — Unauthorized Access</h1>
+    <p class="text-muted lead mb-4">You do not have administrative permissions to view or perform operations on this module.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary shadow-sm"><i class="fa-solid fa-house me-2"></i>Return to Dashboard</a>
+</div>
+{% endblock %}

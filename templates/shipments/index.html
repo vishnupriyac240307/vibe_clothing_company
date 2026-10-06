@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Outbound Shipments{% endblock %}
+{% block breadcrumb %}Shipments{% endblock %}
+
+{% block content %}
+<div class="shipments-container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Outbound Logistics & Shipments</h3>
+            <p class="text-muted small mb-0">Track finished garment shipments from factory dispatch to customer delivery.</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if current_user.role in ['admin', 'manager'] %}
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addShipmentModal">
+                <i class="fa-solid fa-plus me-2"></i>Create Shipment
+            </button>
+            {% endif %}
+            <a href="{{ url_for('reports.export', module='shipments', format='pdf') }}" class="btn btn-outline-danger"><i class="fa-solid fa-file-pdf me-2"></i>Export PDF</a>
+        </div>
+    </div>
+
+    <!-- Shipments Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Shipment ID</th>
+                            <th>Product</th>
+                            <th>Customer</th>
+                            <th>Quantity</th>
+                            <th>Carrier</th>
+                            <th>Tracking No</th>
+                            <th>Shipment Date</th>
+                            <th>Expected Delivery</th>
+                            <th>Status</th>
+                            <th class="text-end">Update Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in shipments %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ s.shipment_id }}</td>
+                            <td>
+                                <span class="fw-bold text-dark">{{ s.product_name }}</span>
+                                <span class="d-block micro text-muted">{{ s.product_id }}</span>
+                            </td>
+                            <td><span class="fw-semibold text-dark">{{ s.customer_name }}</span></td>
+                            <td class="fw-bold fs-6">{{ s.quantity }} units</td>
+                            <td>{{ s.carrier }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ s.tracking_number }}</span></td>
+                            <td class="small">{{ s.shipment_date or 'N/A' }}</td>
+                            <td class="small text-muted">{{ s.expected_delivery or 'N/A' }}</td>
+                            <td>
+                                {% if s.status == 'DELIVERED' %}
+                                    <span class="badge bg-success"><i class="fa-solid fa-check-double me-1"></i>DELIVERED</span>
+                                {% elif s.status == 'IN_TRANSIT' or s.status == 'SHIPPED' %}
+                                    <span class="badge bg-info text-dark"><i class="fa-solid fa-truck-fast me-1"></i>IN TRANSIT</span>
+                                {% elif s.status == 'PACKED' or s.status == 'READY' %}
+                                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-box me-1"></i>{{ s.status }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ s.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <form action="{{ url_for('shipments.update_status', shipment_id=s.shipment_id) }}" method="POST" class="d-inline">
+                                    <select class="form-select form-select-sm d-inline-block w-auto" name="status" onchange="this.form.submit()">
+                                        {% for st in ['READY', 'PACKED', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'DELAYED', 'CANCELLED'] %}
+                                        <option value="{{ st }}" {% if s.status == st %}selected{% endif %}>{{ st }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="10" class="text-center py-5 text-muted">No shipments recorded yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Shipment Modal -->
+<div class="modal fade" id="addShipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-truck-fast me-2 text-primary"></i>Create New Outbound Shipment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('shipments.add_shipment') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
+                            <select class="form-select" name="customer_id" required>
+                                <option value="">Select Destination Customer...</option>
+                                {% for c in customers %}
+                                <option value="{{ c.customer_id }}">{{ c.company_name }} ({{ c.customer_id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Product (Product ID) <span class="text-danger">*</span></label>
+                            <select class="form-select" name="product_id" required>
+                                <option value="">Select Product...</option>
+                                {% for p in products %}
+                                <option value="{{ p.product_id }}">{{ p.name }} ({{ p.product_id }}) — Available Stock: {{ p.available_stock }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Completed Batch (Optional)</label>
+                            <select class="form-select" name="batch_id">
+                                <option value="">None</option>
+                                {% for b in batches %}
+                                <option value="{{ b.batch_id }}">{{ b.batch_id }} ({{ b.product.name if b.product else b.product_id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Shipment Quantity <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="quantity" value="100" min="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Logistics Carrier</label>
+                            <select class="form-select" name="carrier">
+                                <option value="Blue Dart Logistics" selected>Blue Dart Logistics</option>
+                                <option value="Delhivery Express">Delhivery Express</option>
+                                <option value="DHL Supply Chain">DHL Supply Chain</option>
+                                <option value="DTDC Express">DTDC Express</option>
+                                <option value="FedEx India">FedEx India</option>
+                                <option value="Internal Factory Fleet">Internal Factory Fleet</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Carrier Tracking Number</label>
+                            <input type="text" class="form-control" name="tracking_number" placeholder="e.g. BD-98210384">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Expected Delivery Date</label>
+                            <input type="date" class="form-control" name="expected_delivery">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Create Shipment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

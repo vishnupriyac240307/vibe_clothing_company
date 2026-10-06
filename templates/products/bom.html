@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}Bill of Materials — {{ product.name }}{% endblock %}
+{% block page_title %}BOM Recipe Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url_for('products.list_products') }}" class="small text-muted text-decoration-none"><i class="fa-solid fa-arrow-left"></i> Back to Products</a>
+        <h2 class="page-title mt-1">Bill of Materials (BOM): {{ product.name }}</h2>
+        <p class="page-desc">Define raw material requirements per 1 unit of finished product</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- BOM Items Table -->
+    <div class="col-lg-8">
+        <div class="card-custom mb-4">
+            <div class="card-custom-header">
+                <span><i class="fa-solid fa-list-check me-2 text-primary"></i> Required Raw Materials List</span>
+            </div>
+            <div class="card-custom-body p-0">
+                {% if product.bom_items %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.875rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Material Code</th>
+                                <th>Material Name</th>
+                                <th>Required per Unit</th>
+                                <th>Current Stock</th>
+                                <th>Stock Sufficiency (100 units)</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in product.bom_items %}
+                            {% set total_req = b.required_quantity * 100 %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ b.material.material_code if b.material else 'N/A' }}</td>
+                                <td>{{ b.material.name if b.material else 'N/A' }}</td>
+                                <td class="fw-bold text-primary">{{ b.required_quantity }} {{ b.unit }}</td>
+                                <td>{{ b.material.quantity if b.material else 0 }} {{ b.unit }}</td>
+                                <td>
+                                    {% if b.material and b.material.quantity >= total_req %}
+                                    <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Sufficient ({{ b.material.quantity }} / {{ total_req }})</span>
+                                    {% else %}
+                                    <span class="badge bg-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> Deficit: {{ (total_req - (b.material.quantity if b.material else 0))|round(2) }} {{ b.unit }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if session.get('user_role') in ['Admin', 'Manager'] %}
+                                    <form action="{{ url_for('products.delete_bom_item', bom_id=b.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Remove material from BOM?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center p-4 text-muted">
+                    <p class="mb-0">No raw materials added to this product's BOM recipe yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Material Form & Readiness Score -->
+    <div class="col-lg-4">
+        <!-- Readiness Widget -->
+        <div class="card-custom mb-4">
+            <div class="card-custom-header">
+                <span><i class="fa-solid fa-gauge-high me-2 text-primary"></i> Production Readiness (100 units)</span>
+            </div>
+            <div class="card-custom-body text-center">
+                <div class="fs-1 fw-bold {% if readiness.status == 'READY' %}text-success{% elif readiness.status == 'PARTIALLY READY' %}text-warning{% else %}text-danger{% endif %}">
+                    {{ readiness.readiness_percent }}%
+                </div>
+                <div class="mb-3">
+                    <span class="badge-custom {{ readiness.status|badge_class }}">{{ readiness.status }}</span>
+                </div>
+                {% if readiness.missing_count > 0 %}
+                <small class="text-danger d-block"><i class="fa-solid fa-triangle-exclamation"></i> {{ readiness.missing_count }} materials have stock deficits</small>
+                {% else %}
+                <small class="text-success d-block"><i class="fa-solid fa-circle-check"></i> All materials fully available for production launch</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Add Material to BOM Form -->
+        {% if session.get('user_role') in ['Admin', 'Manager'] %}
+        <div class="card-custom mb-0">
+            <div class="card-custom-header">
+                <span><i class="fa-solid fa-plus me-2 text-primary"></i> Add Material to BOM</span>
+            </div>
+            <div class="card-custom-body">
+                <form action="{{ url_for('products.bom_manager', product_id=product.id) }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Material *</label>
+                        <select name="material_id" class="form-select" required>
+                            {% for m in all_materials %}
+                            <option value="{{ m.id }}">{{ m.name }} ({{ m.material_code }}) — {{ m.quantity }} {{ m.unit }} in stock</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Required Quantity per 1 Unit *</label>
+                        <input type="number" step="0.01" min="0.01" name="required_quantity" value="1.5" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Unit of Measure</label>
+                        <select name="unit" class="form-select">
+                            <option value="Meter">Meter</option>
+                            <option value="KG">KG</option>
+                            <option value="PCS">PCS</option>
+                            <option value="Roll">Roll</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-semibold">Save to BOM Recipe</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

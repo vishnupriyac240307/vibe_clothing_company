@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Customers Directory{% endblock %}
+{% block page_title %}Customers Directory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2 class="page-title">Wholesale & Retail Customers</h2>
+        <p class="page-desc">Manage client profiles, company accounts, order statistics, and shipping records</p>
+    </div>
+    {% if session.get('user_role') in ['Admin', 'Manager'] %}
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+        <i class="fa-solid fa-plus"></i> Add New Customer
+    </button>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    {% if customer_data %}
+    {% for cd in customer_data %}
+    {% set c = cd.customer %}
+    <div class="col-xl-4 col-md-6">
+        <div class="card-custom h-100 mb-0">
+            <div class="card-custom-body">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <img src="{{ c.logo_url }}" alt="{{ c.company_name }}" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ c.company_name }}&background=0f172a&color=38bdf8'">
+                    <div>
+                        <h5 class="fw-bold text-dark mb-0">{{ c.company_name }}</h5>
+                        <small class="text-muted">{{ c.customer_type }} • {{ c.city or 'India' }}</small>
+                    </div>
+                </div>
+
+                <div class="bg-light p-3 rounded mb-3 small">
+                    <div class="mb-1"><i class="fa-solid fa-user me-2 text-muted"></i> <strong>Contact:</strong> {{ c.contact_person or 'N/A' }}</div>
+                    <div class="mb-1"><i class="fa-solid fa-envelope me-2 text-muted"></i> {{ c.email or 'N/A' }}</div>
+                    <div><i class="fa-solid fa-phone me-2 text-muted"></i> {{ c.phone or 'N/A' }}</div>
+                </div>
+
+                <div class="row g-2 text-center small border-top pt-2">
+                    <div class="col-4">
+                        <div class="fw-bold text-primary fs-6">{{ cd.total_orders }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">Total Orders</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-warning fs-6">{{ cd.active_orders }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">Active Orders</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-success fs-6">{{ cd.completed_orders }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">Completed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-12 text-center p-5 text-muted card-custom">No customers found.</div>
+    {% endif %}
+</div>
+
+<!-- ADD CUSTOMER MODAL -->
+{% if session.get('user_role') in ['Admin', 'Manager'] %}
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add New Customer Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('partners.add_customer') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Company Name *</label>
+                        <input type="text" name="company_name" class="form-control" placeholder="e.g. Myntra / Reliance Retail" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Contact Person</label>
+                            <input type="text" name="contact_person" class="form-control" placeholder="Key contact">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Customer Type</label>
+                            <select name="customer_type" class="form-select">
+                                <option value="Wholesale">Wholesale Client</option>
+                                <option value="Retailer">Retailer</option>
+                                <option value="Brand Partner">Brand Partner</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="client@company.com">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Phone</label>
+                            <input type="text" name="phone" class="form-control" placeholder="+91 9876543210">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Website (Logo auto-fetched)</label>
+                        <input type="text" name="website" class="form-control" placeholder="https://www.company.com">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

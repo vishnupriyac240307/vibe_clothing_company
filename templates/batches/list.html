@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Manufacturing Batches & Steppers{% endblock %}
+{% block page_title %}Batches & Stepper Engine{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2 class="page-title">Manufacturing Batches Stepper</h2>
+        <p class="page-desc">Track production stages through Cutting, Dyeing, Stitching, Finishing, and Packing</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% if batches %}
+    {% for b in batches %}
+    <div class="col-12">
+        <div class="card-custom mb-0">
+            <div class="card-custom-header">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="fs-5 text-dark">Batch #{{ b.batch_code }}</span>
+                    <span class="badge bg-primary">{{ b.product.name if b.product else 'Apparel' }}</span>
+                    <span class="badge bg-light text-dark border">Order #{{ b.production_order.order_number if b.production_order else 'PO' }}</span>
+                </div>
+                <div>
+                    <span class="badge-custom {{ b.status|badge_class }}">{{ b.status }}</span>
+                </div>
+            </div>
+            <div class="card-custom-body">
+                <!-- VISUAL MANUFACTURING STEPPER -->
+                <div class="stepper-container px-3">
+                    {% for stage in stages %}
+                    {% set is_current = b.current_stage == stage %}
+                    {% set stage_idx = stages.index(stage) %}
+                    {% set current_idx = stages.index(b.current_stage) if b.current_stage in stages else 0 %}
+                    
+                    <div class="stepper-step {% if stage_idx < current_idx or b.status == 'COMPLETED' %}completed{% elif is_current %}active{% endif %}">
+                        <div class="step-circle">
+                            {% if stage_idx < current_idx or b.status == 'COMPLETED' %}
+                            <i class="fa-solid fa-check"></i>
+                            {% else %}
+                            {{ stage_idx + 1 }}
+                            {% endif %}
+                        </div>
+                        <div class="step-label">{{ stage }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="border-top pt-3 mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="small text-muted">
+                        Target: <strong>{{ b.target_quantity }} units</strong> | Customer: <strong>{{ b.customer.company_name if b.customer else 'Internal Stock' }}</strong> | Supervisor: {{ b.supervisor.username if b.supervisor else 'Supervisor' }}
+                    </div>
+                    <div class="d-flex gap-2">
+                        {% if session.get('user_role') in ['Admin', 'Manager'] %}
+                        <form action="{{ url_for('batches.prev_stage', batch_id=b.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary" {% if stages.index(b.current_stage) == 0 %}disabled{% endif %}>
+                                ← Previous Stage
+                            </button>
+                        </form>
+                        {% endif %}
+                        <form action="{{ url_for('batches.next_stage', batch_id=b.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-primary fw-semibold" {% if b.status == 'COMPLETED' or stages.index(b.current_stage) == (stages|length) - 1 %}disabled{% endif %}>
+                                Next Stage →
+                            </button>
+                        </form>
+                        <a href="{{ url_for('quality.list_inspections') }}" class="btn btn-sm btn-outline-success">
+                            <i class="fa-solid fa-clipboard-check"></i> Log QC Inspection
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-12 text-center p-5 text-muted card-custom">
+        <i class="fa-solid fa-layer-group fs-1 mb-3 opacity-50"></i>
+        <h5>No active production batches</h5>
+        <p>Start a Production Order from the Production Kanban board to create active batches.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

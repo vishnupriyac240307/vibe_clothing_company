@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Suppliers Directory{% endblock %}
+{% block page_title %}Suppliers Directory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2 class="page-title">Textile & Trim Suppliers</h2>
+        <p class="page-desc">Manage fabric vendors, performance ratings, and supplied raw material lines</p>
+    </div>
+    {% if session.get('user_role') in ['Admin', 'Manager'] %}
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+        <i class="fa-solid fa-plus"></i> Add New Supplier
+    </button>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    {% if supplier_data %}
+    {% for sd in supplier_data %}
+    {% set s = sd.supplier %}
+    <div class="col-xl-4 col-md-6">
+        <div class="card-custom h-100 mb-0">
+            <div class="card-custom-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="{{ s.logo_url }}" alt="{{ s.supplier_name }}" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ s.supplier_name }}&background=1e293b&color=34d399'">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0">{{ s.supplier_name }}</h5>
+                            <small class="text-muted">{{ s.category }} • {{ s.city or 'India' }}</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-star me-1"></i> {{ s.rating }}</span>
+                </div>
+
+                <div class="bg-light p-3 rounded mb-3 small">
+                    <div class="mb-1"><i class="fa-solid fa-user me-2 text-muted"></i> <strong>Contact:</strong> {{ s.contact_person or 'N/A' }}</div>
+                    <div class="mb-1"><i class="fa-solid fa-envelope me-2 text-muted"></i> {{ s.email or 'N/A' }}</div>
+                    <div class="mb-1"><i class="fa-solid fa-boxes-stacked me-2 text-muted"></i> <strong>Supplies:</strong> {{ s.materials_supplied or 'Fabrics' }}</div>
+                    <div><i class="fa-solid fa-credit-card me-2 text-muted"></i> <strong>Terms:</strong> {{ s.payment_terms }}</div>
+                </div>
+
+                <div class="border-top pt-2 d-flex justify-content-between align-items-center small">
+                    <span class="text-muted"><i class="fa-solid fa-list me-1"></i> Materials Linked: {{ sd.material_count }}</span>
+                    <span class="badge bg-success-subtle text-success">{{ s.status }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-12 text-center p-5 text-muted card-custom">No suppliers found.</div>
+    {% endif %}
+</div>
+
+<!-- ADD SUPPLIER MODAL -->
+{% if session.get('user_role') in ['Admin', 'Manager'] %}
+<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add New Supplier</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('partners.add_supplier') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Supplier / Mill Name *</label>
+                        <input type="text" name="supplier_name" class="form-control" placeholder="e.g. Vardhman Textiles" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Contact Person</label>
+                            <input type="text" name="contact_person" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Category</label>
+                            <select name="category" class="form-select">
+                                <option value="Fabrics">Fabrics & Textiles</option>
+                                <option value="Trims">Trims & Fasteners</option>
+                                <option value="Packaging">Packaging</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" name="email" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Phone</label>
+                            <input type="text" name="phone" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Materials Supplied</label>
+                        <input type="text" name="materials_supplied" class="form-control" placeholder="e.g. Denim, Cotton 180GSM, Zippers">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Supplier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block title %}Product Catalog{% endblock %}
+{% block breadcrumb %}Products{% endblock %}
+
+{% block content %}
+<div class="products-container">
+    <!-- Header Controls -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Product Catalog & BOM</h3>
+            <p class="text-muted small mb-0">Manage finished garment products, prices in Indian Rupees (₹), and Bill of Materials (BOM).</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('products.index', view='grid', category=selected_category, search=search) }}" class="btn btn-outline-secondary {% if view_mode == 'grid' %}active{% endif %}"><i class="fa-solid fa-border-all"></i> Grid</a>
+                <a href="{{ url_for('products.index', view='table', category=selected_category, search=search) }}" class="btn btn-outline-secondary {% if view_mode == 'table' %}active{% endif %}"><i class="fa-solid fa-table-list"></i> Table</a>
+            </div>
+            {% if current_user.role in ['admin', 'manager'] %}
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                <i class="fa-solid fa-plus me-2"></i>Add Product
+            </button>
+            {% endif %}
+            <a href="{{ url_for('reports.export', module='products', format='pdf') }}" class="btn btn-outline-danger"><i class="fa-solid fa-file-pdf me-2"></i>Export PDF</a>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <form method="GET" action="{{ url_for('products.index') }}" class="row g-2 align-items-center">
+                <input type="hidden" name="view" value="{{ view_mode }}">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" name="search" placeholder="Search by Product ID (PROD-XXXX), name, color, size..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" name="category" onchange="this.form.submit()">
+                        <option value="">All Product Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark w-100">Search</button>
+                    <a href="{{ url_for('products.index') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-rotate-left"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if view_mode == 'grid' %}
+    <!-- Product Grid View -->
+    <div class="row g-4 mb-4">
+        {% for p in products %}
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card product-card border-0 shadow-sm h-100">
+                <div class="product-image-wrapper position-relative">
+                    <img src="{{ p.image_url }}" class="card-img-top product-img" alt="{{ p.name }}" onerror="this.src='/static/images/placeholder.svg'">
+                    <span class="badge bg-dark position-absolute top-0 start-0 m-3 px-2 py-1 shadow-sm">{{ p.product_id }}</span>
+                    <span class="badge {% if p.status == 'Active' %}bg-success{% elif p.status == 'In Production' %}bg-warning text-dark{% else %}bg-secondary{% endif %} position-absolute top-0 end-0 m-3 shadow-sm">
+                        {{ p.status }}
+                    </span>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="text-muted micro text-uppercase fw-semibold mb-1">{{ p.category }} • {{ p.size }} • {{ p.color }}</div>
+                    <h5 class="card-title fw-bold text-dark mb-2">{{ p.name }}</h5>
+                    <p class="card-text text-muted small flex-grow-1">{{ p.description | truncate(80) if p.description else 'No description available.' }}</p>
+                    
+                    <div class="price-box bg-light rounded p-2 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-muted micro d-block">Selling Price</span>
+                                <span class="fw-bold text-primary fs-5">{{ p.formatted_selling_price }}</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="text-muted micro d-block">Cost Price</span>
+                                <span class="fw-semibold text-secondary small">{{ p.formatted_cost_price }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center small mb-3">
+                        <span class="text-muted">Finished Goods Stock:</span>
+                        <span class="fw-bold text-dark">{{ p.available_stock }} units</span>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('production.index') }}" class="btn btn-sm btn-success flex-grow-1">
+                            <i class="fa-solid fa-play me-1"></i>Start
+                        </a>
+                        {% if current_user.role in ['admin', 'manager'] %}
+                        <form action="{{ url_for('products.delete_product', product_id=p.product_id) }}" method="POST" class="d-inline flex-grow-1" onsubmit="return confirm('Are you sure you want to delete product {{ p.name }} ({{ p.product_id }})? This action cannot be undone.');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                <i class="fa-solid fa-trash me-1"></i>Delete
+                            </button>
+                        </form>
+                        {% endif %}
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewBOM('{{ p.product_id }}', '{{ p.name }}')" title="View Bill of Materials">
+                            <i class="fa-solid fa-list-check"></i> BOM
+                        </button>
+                        {% if current_user.role in ['admin', 'manager'] %}
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProductModal{{ p.id }}" title="Edit Product">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5 text-muted">
+            <i class="fa-solid fa-tags display-4 mb-3 d-block text-secondary"></i>
+            <h5>No products found</h5>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Product Table View -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product ID</th>
+                            <th>Image</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Size / Color</th>
+                            <th>Selling Price (₹)</th>
+                            <th>Cost Price (₹)</th>
+                            <th>Available Stock</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in products %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ p.product_id }}</td>
+                            <td><img src="{{ p.image_url }}" alt="{{ p.name }}" class="rounded shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" onerror="this.src='/static/images/placeholder.svg'"></td>
+                            <td class="fw-bold text-dark">{{ p.name }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ p.category }}</span></td>
+                            <td class="small">{{ p.size }} / {{ p.color }}</td>
+                            <td class="fw-bold text-primary">{{ p.formatted_selling_price }}</td>
+                            <td class="text-muted">{{ p.formatted_cost_price }}</td>
+                            <td><span class="fw-bold">{{ p.available_stock }}</span> units</td>
+                            <td>
+                                <span class="badge {% if p.status == 'Active' %}bg-success-subtle text-success{% elif p.status == 'In Production' %}bg-warning-subtle text-warning{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                                    {{ p.status }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('production.index') }}" class="btn btn-sm btn-success me-1">
+                                    <i class="fa-solid fa-play me-1"></i>Start
+                                </a>
+                                {% if current_user.role in ['admin', 'manager'] %}
+                                <form action="{{ url_for('products.delete_product', product_id=p.product_id) }}" method="POST" class="d-inline me-1" onsubmit="return confirm('Are you sure you want to delete product {{ p.name }} ({{ p.product_id }})? This action cannot be undone.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash me-1"></i>Delete</button>
+                                </form>
+                                <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#editProductModal{{ p.id }}"><i class="fa-solid fa-pen-to-square"></i></button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewBOM('{{ p.product_id }}', '{{ p.name }}')">BOM</button>
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus me-2 text-primary"></i>Create New Finished Product</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('products.add_product') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" placeholder="e.g. Cotton T-Shirt" required>
+                            <span class="micro text-muted">System will automatically assign unique Product ID (PROD-XXXX).</span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" name="category" required>
+                                <option value="T-Shirts" selected>T-Shirts</option>
+                                <option value="Shirts">Shirts</option>
+                                <option value="Bottom Wear">Bottom Wear (Jeans/Trousers)</option>
+                                <option value="Jackets">Jackets</option>
+                                <option value="Outerwear">Outerwear / Hoodies</option>
+                                <option value="Dresses">Dresses</option>
+                                <option value="Activewear">Activewear</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Size</label>
+                            <select class="form-select" name="size">
+                                <option value="S">S</option>
+                                <option value="M" selected>M</option>
+                                <option value="L">L</option>
+                                <option value="XL">XL</option>
+                                <option value="XXL">XXL</option>
+                                <option value="Free Size">Free Size</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Color</label>
+                            <input type="text" class="form-control" name="color" placeholder="e.g. Navy Blue">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Selling Price (₹) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" name="selling_price" placeholder="799.00" min="0" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Cost Price (₹) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" name="cost_price" placeholder="450.00" min="0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Custom Product Image URL</label>
+                            <input type="url" class="form-control" name="image_url" placeholder="Leave empty for auto-fetched Unsplash/Pexels image">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Target Batch Quantity</label>
+                            <input type="number" class="form-control" name="target_quantity" value="100" min="1">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Product Description</label>
+                            <textarea class="form-control" name="description" rows="2" placeholder="Fabric specifications, fit, care instructions..."></textarea>
+                        </div>
+
+                        <!-- Dynamic Bill of Materials (BOM) Section -->
+                        <div class="col-12 mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-list-check me-2"></i>Bill of Materials (BOM Specification)</h6>
+                                <button type="button" class="btn btn-xs btn-outline-primary" id="btnAddBomRow"><i class="fa-solid fa-plus me-1"></i>Add Material Requirement</button>
+                            </div>
+                            <p class="micro text-muted mb-2">Specify raw materials consumed per 1 finished unit of this product.</p>
+                            <div id="bomRowsContainer">
+                                <div class="row g-2 mb-2 bom-row">
+                                    <div class="col-md-7">
+                                        <select class="form-select form-select-sm" name="material_id[]">
+                                            <option value="">Select Material...</option>
+                                            {% for m in materials %}
+                                            <option value="{{ m.material_id }}">{{ m.name }} ({{ m.material_id }}) — Stock: {{ m.quantity }} {{ m.unit }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="number" step="0.01" class="form-control form-control-sm" name="quantity_required[]" placeholder="Qty per unit (e.g. 1.5)" min="0.001">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-bom-row"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Save Product & BOM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- BOM View Modal -->
+<div class="modal fade" id="bomViewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="bomModalTitle">Bill of Materials</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Raw Material</th>
+                                <th>Req. per Unit</th>
+                                <th>Current Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bomTableBody">
+                            <tr><td colspan="3" class="text-center py-3 text-muted">Loading BOM...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $('#btnAddBomRow').on('click', function() {
+        var firstRow = $('.bom-row').first().clone();
+        firstRow.find('input').val('');
+        firstRow.find('select').val('');
+        $('#bomRowsContainer').append(firstRow);
+    });
+
+    $(document).on('click', '.remove-bom-row', function() {
+        if ($('.bom-row').length > 1) {
+            $(this).closest('.bom-row').remove();
+        }
+    });
+
+    function viewBOM(productId, productName) {
+        $('#bomModalTitle').text('BOM Specification: ' + productName + ' (' + productId + ')');
+        $('#bomTableBody').html('<tr><td colspan="3" class="text-center py-3 text-muted">Loading BOM...</td></tr>');
+        $('#bomViewModal').modal('show');
+
+        $.get('/api/products/' + productId + '/bom', function(data) {
+            if (data.success && data.bom.length > 0) {
+                var html = '';
+                data.bom.forEach(function(item) {
+                    html += '<tr>' +
+                        '<td><span class="fw-bold text-dark">' + item.material_name + '</span> <span class="d-block micro text-muted">' + item.material_id + '</span></td>' +
+                        '<td class="fw-bold text-primary">' + item.quantity_required + ' ' + item.material_unit + '</td>' +
+                        '<td>' + item.material_stock + ' ' + item.material_unit + '</td>' +
+                        '</tr>';
+                });
+                $('#bomTableBody').html(html);
+            } else {
+                $('#bomTableBody').html('<tr><td colspan="3" class="text-center py-4 text-muted">No BOM materials specified for this product.</td></tr>');
+            }
+        });
+    }
+</script>
+{% endblock %}

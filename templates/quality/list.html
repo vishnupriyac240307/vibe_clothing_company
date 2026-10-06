@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Quality Control{% endblock %}
+{% block page_title %}Quality Control & Inspection{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2 class="page-title">Quality Control & Inspection</h2>
+        <p class="page-desc">Record quality checks for production orders and batches, track defect metrics, and manage inspection statuses</p>
+    </div>
+    {% if session.get('user_role') in ['Admin', 'Supervisor', 'Manager'] %}
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addInspectionModal">
+        <i class="fa-solid fa-plus me-1"></i> New Quality Check
+    </button>
+    {% endif %}
+</div>
+
+<!-- QC KPI SUMMARY -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card-custom mb-0 p-3 d-flex align-items-center gap-3">
+            <div class="kpi-icon green mb-0"><i class="fa-solid fa-clipboard-check"></i></div>
+            <div>
+                <div class="fw-bold fs-5 text-success">{{ pass_rate }}%</div>
+                <div class="small text-muted">Quality Pass Rate</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom mb-0 p-3 d-flex align-items-center gap-3">
+            <div class="kpi-icon blue mb-0"><i class="fa-solid fa-boxes-packing"></i></div>
+            <div>
+                <div class="fw-bold fs-5">{{ total_eval }} pcs</div>
+                <div class="small text-muted">Total Inspected</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom mb-0 p-3 d-flex align-items-center gap-3">
+            <div class="kpi-icon green mb-0"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+                <div class="fw-bold fs-5 text-success">{{ total_passed }} pcs</div>
+                <div class="small text-muted">Passed Quantity</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom mb-0 p-3 d-flex align-items-center gap-3">
+            <div class="kpi-icon red mb-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div>
+                <div class="fw-bold fs-5 text-danger">{{ total_failed }} pcs</div>
+                <div class="small text-muted">Failed Quantity</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- INSPECTIONS TABLE -->
+<div class="card-custom">
+    <div class="card-custom-body p-0">
+        {% if inspections %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.875rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th>Quality Check ID</th>
+                        <th>Production Order / Batch</th>
+                        <th>Product</th>
+                        <th>Inspection Date</th>
+                        <th>Inspected</th>
+                        <th>Passed</th>
+                        <th>Failed</th>
+                        <th>Defect Type</th>
+                        <th>Inspector</th>
+                        <th>Quality Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in inspections %}
+                    <tr>
+                        <td class="fw-bold text-dark">QC-{{ "%04d"|format(i.id) }}</td>
+                        <td>
+                            <div class="fw-bold text-primary">{{ i.batch.batch_code if i.batch else 'N/A' }}</div>
+                            <small class="text-muted">Order: {{ i.batch.production_order.order_number if i.batch and i.batch.production_order else 'N/A' }}</small>
+                        </td>
+                        <td>{{ i.product.name if i.product else 'N/A' }}</td>
+                        <td><small class="text-muted">{{ i.inspection_date.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                        <td class="fw-bold">{{ i.total_evaluated }} pcs</td>
+                        <td class="text-success fw-semibold">{{ i.passed_units }} pcs</td>
+                        <td class="{% if i.defective_units > 0 %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ i.defective_units }} pcs</td>
+                        <td><span class="badge bg-light text-dark border">{{ i.defect_type or 'None' }}</span></td>
+                        <td><small>{{ i.inspector.username if i.inspector else 'Inspector' }}</small></td>
+                        <td>
+                            <span class="badge-custom {% if i.qa_status in ['Passed', 'PASS'] %}badge-success{% elif i.qa_status == 'Recheck Required' %}badge-warning{% else %}badge-danger{% endif %}">
+                                {{ i.qa_status }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            {% if session.get('user_role') in ['Admin', 'Supervisor', 'Manager'] %}
+                            <form action="{{ url_for('quality.delete_inspection', inspection_id=i.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete inspection record?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center p-5 text-muted">
+            <i class="fa-solid fa-clipboard-check fs-1 text-secondary mb-3 opacity-50"></i>
+            <h5>No quality inspections logged yet</h5>
+            <p class="small">Click "New Quality Check" to record product quality evaluations.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- NEW QC INSPECTION MODAL -->
+{% if session.get('user_role') in ['Admin', 'Supervisor', 'Manager'] %}
+<div class="modal fade" id="addInspectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Log Quality Control Inspection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('quality.add_inspection') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Manufacturing Batch / Order *</label>
+                        <select name="batch_id" class="form-select" required>
+                            {% for b in batches %}
+                            <option value="{{ b.id }}">Batch #{{ b.batch_code }} — {{ b.product.name if b.product else '' }} (Target: {{ b.target_quantity }} pcs)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Quantity Inspected *</label>
+                            <input type="number" min="1" name="total_evaluated" value="50" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Quantity Failed (Defects) *</label>
+                            <input type="number" min="0" name="defective_units" value="0" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Defect Type</label>
+                        <select name="defect_type" class="form-select">
+                            <option value="None">None (Passed Quality Inspection)</option>
+                            <option value="Fabric Tear / Weave Stain">Fabric Tear / Weave Stain</option>
+                            <option value="Color Deviation / Dye Fade">Color Deviation / Dye Fade</option>
+                            <option value="Stitching Error / Loose Thread">Stitching Error / Loose Thread</option>
+                            <option value="Size Mismatch / Dimension Out of Spec">Size Mismatch / Dimension Out of Spec</option>
+                            <option value="Zipper / Button Defect">Zipper / Button Defect</option>
+                            <option value="Labeling / Tagging Error">Labeling / Tagging Error</option>
+                            <option value="Other">Other / Miscellaneous</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Quality Status Override</label>
+                        <select name="qa_status" class="form-select">
+                            <option value="Passed">Passed</option>
+                            <option value="Failed">Failed</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Recheck Required">Recheck Required</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Remarks & Inspector Notes</label>
+                        <textarea name="remarks" class="form-control" rows="2" placeholder="Inspection findings..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Inspection Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}End-to-End Traceability{% endblock %}
+{% block breadcrumb %}Traceability{% endblock %}
+
+{% block content %}
+<div class="traceability-container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Batch-to-Customer Lineage & Traceability</h3>
+            <p class="text-muted small mb-0">Complete end-to-end audit map connecting raw materials, factory batches, quality pass rates, and customer delivery.</p>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <form method="GET" action="{{ url_for('traceability.index') }}" class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold mb-1">Select Batch ID or Order ID to Trace</label>
+                    <select class="form-select" name="batch_id" onchange="this.form.submit()">
+                        <option value="">Choose Batch ID (e.g. BAT-0001)...</option>
+                        {% for rb in recent_batches %}
+                        <option value="{{ rb.batch_id }}" {% if searched_batch_id == rb.batch_id %}selected{% endif %}>
+                            {{ rb.batch_id }} ({{ rb.product.name if rb.product else rb.product_id }}) — Stage: {{ rb.current_stage }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold mb-1">Or Enter Production Order ID</label>
+                    <input type="text" class="form-control" name="order_id" placeholder="e.g. ORD-0001" value="{{ searched_order_id }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100 mt-4"><i class="fa-solid fa-diagram-project me-2"></i>Trace Lineage</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if batch or order %}
+    <!-- Traceability Lineage Node Map -->
+    <div class="card border-0 shadow-sm p-4">
+        <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-diagram-next me-2 text-primary"></i>Garment Lifecycle Traceability Map</h5>
+        
+        <div class="timeline-lineage">
+            <!-- Node 1: Customer Order -->
+            <div class="lineage-node border-start border-4 border-primary ps-3 mb-4">
+                <div class="badge bg-primary mb-1">STEP 1: CUSTOMER ORDER</div>
+                <h5 class="fw-bold text-dark">{{ order.customer.company_name if order and order.customer else 'Internal Stock Order' }}</h5>
+                <p class="small text-muted mb-0">Production Order ID: <strong>{{ order.order_id if order else 'N/A' }}</strong> • Target Qty: <strong>{{ order.quantity if order else 'N/A' }} units</strong> • Priority: <strong>{{ order.priority if order else 'Medium' }}</strong></p>
+            </div>
+
+            <!-- Node 2: Product & BOM -->
+            <div class="lineage-node border-start border-4 border-info ps-3 mb-4">
+                <div class="badge bg-info text-dark mb-1">STEP 2: GARMENT PRODUCT & BOM</div>
+                <h5 class="fw-bold text-dark">{{ batch.product.name if batch and batch.product else (order.product.name if order and order.product else 'N/A') }}</h5>
+                <p class="small text-muted mb-0">Product ID: <strong>{{ batch.product_id if batch else (order.product_id if order else 'N/A') }}</strong> • Category: <strong>{{ batch.product.category if batch and batch.product else 'N/A' }}</strong></p>
+            </div>
+
+            <!-- Node 3: Raw Materials & Inventory Txns -->
+            <div class="lineage-node border-start border-4 border-warning ps-3 mb-4">
+                <div class="badge bg-warning text-dark mb-1">STEP 3: RAW MATERIALS CONSUMPTION</div>
+                {% if transactions %}
+                    <ul class="list-group list-group-flush small">
+                        {% for t in transactions %}
+                        <li class="list-group-item px-0 py-1 bg-transparent">
+                            <i class="fa-solid fa-boxes-stacked me-2 text-warning"></i>
+                            <strong>{{ t.material_name }}</strong> ({{ t.material_id }}): Consumed {{ t.quantity }} {{ t.material_unit }} • Txn: {{ t.transaction_id }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="small text-muted">Raw materials linked via Product BOM.</p>
+                {% endif %}
+            </div>
+
+            <!-- Node 4: Factory Batch Stepper -->
+            <div class="lineage-node border-start border-4 border-purple ps-3 mb-4">
+                <div class="badge bg-purple mb-1">STEP 4: FACTORY BATCH PROCESSING</div>
+                <h5 class="fw-bold text-dark">{{ batch.batch_id if batch else 'N/A' }}</h5>
+                <p class="small text-muted mb-0">Current Stage: <span class="badge bg-primary">{{ batch.current_stage if batch else 'N/A' }}</span> • Status: <strong>{{ batch.status if batch else 'N/A' }}</strong> • Produced: <strong>{{ batch.produced_quantity if batch else 0 }} units</strong></p>
+            </div>
+
+            <!-- Node 5: QC Inspection -->
+            <div class="lineage-node border-start border-4 border-success ps-3 mb-4">
+                <div class="badge bg-success mb-1">STEP 5: QUALITY CONTROL INSPECTION</div>
+                {% if inspections %}
+                    {% for q in inspections %}
+                    <p class="small mb-1">
+                        Inspection ID: <strong>{{ q.inspection_id }}</strong> • Pass Rate: <strong class="text-success">{{ q.pass_rate }}%</strong> • QA Status: <span class="badge bg-success">{{ q.qa_status }}</span>
+                    </p>
+                    <span class="micro text-muted">Evaluated: {{ q.total_evaluated }} | Defects: {{ q.defective_units }} ({{ q.defect_type }})</span>
+                    {% endfor %}
+                {% else %}
+                    <p class="small text-muted">No QC inspection logged yet for this batch.</p>
+                {% endif %}
+            </div>
+
+            <!-- Node 6: Shipment & Delivery -->
+            <div class="lineage-node border-start border-4 border-dark ps-3">
+                <div class="badge bg-dark mb-1">STEP 6: OUTBOUND SHIPMENT & DELIVERY</div>
+                {% if shipments %}
+                    {% for s in shipments %}
+                    <p class="small mb-1">
+                        Shipment ID: <strong>{{ s.shipment_id }}</strong> • Carrier: <strong>{{ s.carrier }}</strong> • Tracking: <strong>{{ s.tracking_number }}</strong>
+                    </p>
+                    <span class="badge bg-info text-dark">Status: {{ s.status }}</span>
+                    {% endfor %}
+                {% else %}
+                    <p class="small text-muted">Shipment pending completion of manufacturing batch.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm p-5 text-center text-muted">
+        <i class="fa-solid fa-diagram-project display-3 text-secondary mb-3"></i>
+        <h5>Select a Batch or Order to visualize full manufacturing lineage</h5>
+        <p class="small">Choose from the dropdown list above or search by Order ID.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications & Alerts{% endblock %}
+{% block page_title %}Notifications & System Alerts{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="fw-bold m-0"><i class="fa-solid fa-bell text-primary me-2"></i>Notifications & System Alerts</h4>
+        <p class="text-muted small m-0">Monitor real-time inventory warnings, production updates, and shipment alerts</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" id="page-mark-all-read-btn">
+            <i class="fa-solid fa-check-double me-1"></i> Mark All as Read
+        </button>
+        <button class="btn btn-outline-danger btn-sm" id="page-clear-all-btn">
+            <i class="fa-solid fa-trash-can me-1"></i> Clear All
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3">
+        <div class="nav nav-pills card-header-pills">
+            <a class="nav-link {% if not selected_category %}active{% endif %}" href="{{ url_for('notifications.list_notifications') }}">All Alerts</a>
+            <a class="nav-link {% if selected_category == 'low_stock' %}active{% endif %}" href="{{ url_for('notifications.list_notifications', category='low_stock') }}">Low Stock</a>
+            <a class="nav-link {% if selected_category == 'new_order' %}active{% endif %}" href="{{ url_for('notifications.list_notifications', category='new_order') }}">Production</a>
+            <a class="nav-link {% if selected_category == 'shipment_pending' %}active{% endif %}" href="{{ url_for('notifications.list_notifications', category='shipment_pending') }}">Shipments</a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if notifications %}
+        <div class="list-group list-group-flush">
+            {% for notif in notifications %}
+            <div class="list-group-item p-3 d-flex align-items-center justify-content-between {% if not notif.is_read %}bg-light-subtle fw-semibold{% endif %}">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="rounded-circle p-2 bg-primary-subtle text-primary mt-1">
+                        {% if 'stock' in (notif.type or '') %}
+                            <i class="fa-solid fa-triangle-exclamation text-warning fs-5"></i>
+                        {% elif 'shipment' in (notif.type or '') %}
+                            <i class="fa-solid fa-truck text-info fs-5"></i>
+                        {% else %}
+                            <i class="fa-solid fa-industry text-primary fs-5"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-dark fw-bold">{{ notif.title }}</span>
+                            {% if not notif.is_read %}
+                            <span class="badge bg-danger rounded-pill">New</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-secondary small mt-1">{{ notif.message }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem; margin-top: 4px;">
+                            <i class="fa-regular fa-clock me-1"></i>{{ notif.created_at.strftime('%b %d, %Y %H:%M') if notif.created_at else '' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    {% if notif.link and notif.link != '#' %}
+                    <a href="{{ notif.link }}" class="btn btn-sm btn-outline-secondary">View Details</a>
+                    {% endif %}
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteNotif({{ notif.id }})" title="Delete Notification">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center p-5 text-muted">
+            <i class="fa-regular fa-bell-slash fs-1 text-secondary mb-3 d-block"></i>
+            <h5>No notifications found</h5>
+            <p class="small">System alerts for low stock, production delays, and shipments will appear here.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteNotif(id) {
+    fetch('/api/notifications/delete/' + id, { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+        window.location.reload();
+    });
+}
+
+document.getElementById('page-mark-all-read-btn')?.addEventListener('click', function() {
+    fetch('/api/notifications/mark-all-read', { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+        window.location.reload();
+    });
+});
+
+document.getElementById('page-clear-all-btn')?.addEventListener('click', function() {
+    if (confirm('Are you sure you want to clear all notifications?')) {
+        fetch('/api/notifications/delete-all', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            window.location.reload();
+        });
+    }
+});
+</script>
+{% endblock %}

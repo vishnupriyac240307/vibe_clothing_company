@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} — VIBE CLOTHING COMPANY</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom ERP CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if current_user and current_user.id %}
+    <!-- Persistent Application Shell -->
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-brand d-flex align-items-center gap-2">
+                <div class="brand-icon">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Vibe Clothing Logo" style="height: 38px; width: auto; object-fit: contain;" class="rounded">
+                </div>
+                <div class="brand-text">
+                    <span class="company-name" style="letter-spacing: 0.5px; font-weight: 800;">VIBE CLOTHING</span>
+                    <span class="sub-brand">SMART MANUFACTURING</span>
+                </div>
+            </div>
+
+
+            <div class="sidebar-menu">
+                <div class="menu-category">OPERATIONS</div>
+                <a href="{{ url_for('dashboard.index') }}" class="menu-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('inventory.index') }}" class="menu-item {% if request.endpoint == 'inventory.index' or request.endpoint == 'inventory.transactions' %}active{% endif %}">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <span>Inventory</span>
+                    {% if low_stock_count > 0 %}
+                    <span class="badge bg-warning text-dark ms-auto">{{ low_stock_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('products.index') }}" class="menu-item {% if request.endpoint == 'products.index' %}active{% endif %}">
+                    <i class="fa-solid fa-tags"></i>
+                    <span>Products</span>
+                </a>
+                <a href="{{ url_for('production.index') }}" class="menu-item {% if request.endpoint == 'production.index' %}active{% endif %}">
+                    <i class="fa-solid fa-industry"></i>
+                    <span>Production Orders</span>
+                </a>
+                <a href="{{ url_for('inventory.transactions') }}" class="menu-item {% if request.endpoint == 'inventory.transactions' %}active{% endif %}">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>Transactions</span>
+                </a>
+                <a href="{{ url_for('batches.index') }}" class="menu-item {% if request.endpoint == 'batches.index' %}active{% endif %}">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>Batches</span>
+                </a>
+
+                <div class="menu-category">RELATIONS</div>
+                <a href="{{ url_for('customers.index') }}" class="menu-item {% if request.endpoint == 'customers.index' or request.endpoint == 'customers.detail' %}active{% endif %}">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Customers</span>
+                </a>
+                <a href="{{ url_for('suppliers.index') }}" class="menu-item {% if request.endpoint == 'suppliers.index' %}active{% endif %}">
+                    <i class="fa-solid fa-truck-field"></i>
+                    <span>Suppliers</span>
+                </a>
+
+                <div class="menu-category">QUALITY & LOGISTICS</div>
+                <a href="{{ url_for('quality.index') }}" class="menu-item {% if request.endpoint == 'quality.index' %}active{% endif %}">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    <span>Quality Control</span>
+                </a>
+                <a href="{{ url_for('shipments.index') }}" class="menu-item {% if request.endpoint == 'shipments.index' %}active{% endif %}">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    <span>Shipments</span>
+                </a>
+                <a href="{{ url_for('traceability.index') }}" class="menu-item {% if request.endpoint == 'traceability.index' %}active{% endif %}">
+                    <i class="fa-solid fa-diagram-project"></i>
+                    <span>Traceability</span>
+                </a>
+
+                <div class="menu-category">ADMINISTRATION</div>
+                <a href="{{ url_for('analytics.index') }}" class="menu-item {% if request.endpoint == 'analytics.index' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Analytics</span>
+                </a>
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('users.index') }}" class="menu-item {% if request.endpoint == 'users.index' %}active{% endif %}">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>User Management</span>
+                </a>
+                {% endif %}
+                {% if current_user.role in ['admin', 'manager'] %}
+                <a href="{{ url_for('activity.index') }}" class="menu-item {% if request.endpoint == 'activity.index' %}active{% endif %}">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Activity Logs</span>
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="{{ url_for('profile.index') }}" class="user-profile-card">
+                    <div class="avatar-circle">
+                        {{ current_user.username[0] | upper }}
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">{{ current_user.username }}</span>
+                        <span class="user-role badge badge-role-{{ current_user.role }}">{{ current_user.role | upper }}</span>
+                    </div>
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="btn-logout" title="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <!-- Top Navbar -->
+            <header class="app-topbar">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">{% block breadcrumb %}Dashboard{% endblock %}</li>
+                    </ol>
+                </nav>
+
+                <div class="ms-auto d-flex align-items-center gap-3">
+                    <!-- Global Search Button -->
+                    <button class="btn btn-light rounded-pill px-3 py-1 text-muted border border-secondary-subtle" data-bs-toggle="modal" data-bs-target="#globalSearchModal">
+                        <i class="fa-solid fa-magnifying-glass me-2"></i>
+                        <span class="d-none d-sm-inline">Search materials, products, orders...</span>
+                        <kbd class="ms-2 d-none d-md-inline">Ctrl K</kbd>
+                    </button>
+
+                    <!-- Notifications Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-icon position-relative" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-regular fa-bell fs-5"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="{% if unread_notifications_count == 0 %}display:none;{% endif %}">
+                                {{ unread_notifications_count }}
+                            </span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end notif-dropdown shadow-lg border-0 p-0" aria-labelledby="notifDropdown" style="width: 360px;">
+                            <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+                                <h6 class="mb-0 fw-bold">Notifications</h6>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button class="btn btn-sm btn-link text-decoration-none p-0 text-primary small" id="btnMarkAllRead" onclick="markAllNotifsRead(event)">Mark all read</button>
+                                    <span class="text-muted">•</span>
+                                    <button class="btn btn-sm btn-link text-decoration-none p-0 text-danger small" id="btnClearAllNotifs" onclick="clearAllNotifs(event)">Clear all</button>
+                                </div>
+                            </div>
+                            <div class="notif-list custom-scrollbar" id="notifList" style="max-height: 320px; overflow-y: auto;">
+                                <div class="text-center py-4 text-muted small">Loading notifications...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <button class="btn btn-icon" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+                        <i class="fa-regular fa-moon fs-5" id="themeIcon"></i>
+                    </button>
+
+                    <!-- User Profile Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn p-0 d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                            <div class="avatar-circle-sm">
+                                {{ current_user.username[0] | upper }}
+                            </div>
+                            <span class="fw-semibold small d-none d-md-inline">{{ current_user.username }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li><a class="dropdown-menu-item dropdown-item" href="{{ url_for('profile.index') }}"><i class="fa-regular fa-user me-2"></i>My Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-menu-item dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Flash Alerts -->
+            <div class="container-fluid px-4 pt-3">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                                {% if category == 'success' %}
+                                    <i class="fa-solid fa-circle-check me-2"></i>
+                                {% elif category == 'danger' %}
+                                    <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                                {% else %}
+                                    <i class="fa-solid fa-circle-info me-2"></i>
+                                {% endif %}
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Page Content -->
+            <div class="app-content container-fluid px-4 py-3">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    {% else %}
+        <!-- Unauthenticated Page Layout -->
+        {% block auth_layout %}{% endblock %}
+    {% endif %}
+
+    <!-- Global Search Modal -->
+    <div class="modal fade" id="globalSearchModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-transparent border-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" class="form-control border-0 shadow-none ps-0" id="globalSearchInput" placeholder="Search Materials, Products (PROD-XXXX), Orders, Batches, Customers..." autofocus>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="globalSearchResults" class="list-group list-group-flush">
+                        <p class="text-center text-muted py-3">Type at least 2 characters to search across all manufacturing entities...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 & jQuery Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Custom ERP JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/real-time.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

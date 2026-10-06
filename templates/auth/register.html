@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Create Account{% endblock %}
+
+{% block auth_layout %}
+<div class="auth-wrapper">
+    <div class="auth-card shadow-lg" style="max-width: 500px;">
+        <div class="auth-header text-center">
+            <div class="brand-logo mb-2">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Vibe Clothing Logo" style="height: 56px; width: auto; object-fit: contain;">
+            </div>
+
+            <h3 class="fw-bold mb-1">Create Account</h3>
+            <p class="text-muted small">Register for Vibe Clothing Company ERP Access</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('auth.register') }}" method="POST" class="auth-form mt-3" id="registerForm">
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label for="role" class="form-label fw-semibold">User Type / Role</label>
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="staff" selected>Staff</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="username" class="form-label fw-semibold">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="e.g. john_doe" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label fw-semibold">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="john@vibeclothing.com" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="phone" class="form-label fw-semibold">Phone Number</label>
+                <input type="text" class="form-control" id="phone" name="phone" placeholder="+91 98765 43210">
+            </div>
+
+            <div class="row g-2 mb-4">
+                <div class="col-md-6">
+                    <label for="password" class="form-label fw-semibold">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Min 6 chars" minlength="6" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="confirm_password" class="form-label fw-semibold">Confirm Password</label>
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Repeat password" minlength="6" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm font-weight-bold">
+                <i class="fa-solid fa-user-plus me-2"></i>Create Account
+            </button>
+        </form>
+
+        <div class="auth-footer text-center mt-4 pt-3 border-top">
+            <p class="text-muted small mb-0">Already have an account? <a href="{{ url_for('auth.login') }}" class="fw-bold text-primary text-decoration-none">Sign In</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

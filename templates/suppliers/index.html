@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Suppliers Directory{% endblock %}
+{% block breadcrumb %}Suppliers{% endblock %}
+
+{% block content %}
+<div class="suppliers-container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Suppliers Directory</h3>
+            <p class="text-muted small mb-0">Manage raw material vendors, fabric mills, thread manufacturers, and rating metrics.</p>
+        </div>
+        {% if current_user.role in ['admin', 'manager'] %}
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+            <i class="fa-solid fa-plus me-2"></i>Add Supplier
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Suppliers Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Supplier ID</th>
+                            <th>Logo / Company</th>
+                            <th>Category</th>
+                            <th>Contact Person</th>
+                            <th>Email & Phone</th>
+                            <th>Payment Terms</th>
+                            <th>Rating</th>
+                            <th>Supplied Materials</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in suppliers %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ s.supplier_id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="{{ s.logo_url }}" class="rounded shadow-sm" style="width: 38px; height: 38px; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ s.supplier_name }}&background=0f172a&color=ffffff'">
+                                    <div>
+                                        <span class="fw-bold text-dark d-block">{{ s.supplier_name }}</span>
+                                        <span class="micro text-muted">GST: {{ s.gst_id or 'N/A' }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ s.supplier_category }}</span></td>
+                            <td>{{ s.contact_person or 'N/A' }}</td>
+                            <td class="small">
+                                {{ s.email }}<br>
+                                <span class="text-muted">{{ s.phone }}</span>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ s.payment_terms }}</span></td>
+                            <td>
+                                <div class="text-warning fw-bold small">
+                                    <i class="fa-solid fa-star me-1"></i>{{ s.rating }} / 5.0
+                                </div>
+                            </td>
+                            <td><span class="fw-bold text-primary">{{ s.materials_supplied_count }}</span> materials</td>
+                            <td><span class="badge bg-success-subtle text-success">{{ s.status }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="9" class="text-center py-5 text-muted">No suppliers registered yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Supplier Modal -->
+<div class="modal fade" id="addSupplierModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus me-2 text-primary"></i>Add New Supplier</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('suppliers.add_supplier') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Supplier / Company Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="supplier_name" placeholder="e.g. ABC Textiles" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Supplier Category</label>
+                            <select class="form-select" name="supplier_category">
+                                <option value="Fabrics" selected>Fabrics</option>
+                                <option value="Knitted Fabrics">Knitted Fabrics</option>
+                                <option value="Threads & Yarns">Threads & Yarns</option>
+                                <option value="Buttons & Trims">Buttons & Trims</option>
+                                <option value="Dyes & Chemicals">Dyes & Chemicals</option>
+                                <option value="Packaging Materials">Packaging Materials</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Contact Person</label>
+                            <input type="text" class="form-control" name="contact_person" placeholder="e.g. Rajesh Sharma">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email Address</label>
+                            <input type="email" class="form-control" name="email" placeholder="sales@abctextiles.in">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Phone Number</label>
+                            <input type="text" class="form-control" name="phone" placeholder="+91 44 2345 6789">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">GST / Tax ID</label>
+                            <input type="text" class="form-control" name="gst_id" placeholder="33AAACA1234A1Z5">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Payment Terms</label>
+                            <select class="form-select" name="payment_terms">
+                                <option value="Net 15">Net 15</option>
+                                <option value="Net 30" selected>Net 30</option>
+                                <option value="Net 60">Net 60</option>
+                                <option value="Advance">Advance</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Initial Rating (1 to 5)</label>
+                            <input type="number" step="0.1" class="form-control" name="rating" value="4.5" min="1.0" max="5.0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">City</label>
+                            <input type="text" class="form-control" name="city" placeholder="Chennai">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Save Supplier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% block title %}Production Overview{% endblock %}
+{% block breadcrumb %}Production Overview{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header Title -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Production Overview</h3>
+            <p class="text-muted small mb-0">Live status of manufacturing, inventory, quality, and outbound shipments.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('production.index') }}" class="btn btn-primary shadow-sm"><i class="fa-solid fa-plus me-2"></i>New Production Order</a>
+            <a href="{{ url_for('inventory.index') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-boxes-stacked me-2"></i>Manage Inventory</a>
+        </div>
+    </div>
+
+    <!-- 10 KPI Cards Grid -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Total Materials -->
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Total Materials</span>
+                        <div class="kpi-icon bg-primary-subtle text-primary"><i class="fa-solid fa-boxes-stacked"></i></div>
+                    </div>
+                    <h4 class="kpi-value mt-2 mb-0" id="kpiTotalMaterials">{{ stats.total_materials }}</h4>
+                    <span class="badge bg-light text-secondary mt-2">Raw Stock Items</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Active Products -->
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Products</span>
+                        <div class="kpi-icon bg-info-subtle text-info"><i class="fa-solid fa-tags"></i></div>
+                    </div>
+                    <h4 class="kpi-value mt-2 mb-0" id="kpiTotalProducts">{{ stats.total_products }}</h4>
+                    <span class="badge bg-light text-secondary mt-2">Garment Catalog</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Active Orders -->
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Active Orders</span>
+                        <div class="kpi-icon bg-warning-subtle text-warning"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    </div>
+                    <h4 class="kpi-value mt-2 mb-0" id="kpiActiveOrders">{{ stats.active_orders }}</h4>
+                    <span class="badge bg-warning-subtle text-warning mt-2">In Factory</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Completed Orders -->
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Completed Orders</span>
+                        <div class="kpi-icon bg-success-subtle text-success"><i class="fa-solid fa-circle-check"></i></div>
+                    </div>
+                    <h4 class="kpi-value mt-2 mb-0" id="kpiCompletedOrders">{{ stats.completed_orders }}</h4>
+                    <span class="badge bg-success-subtle text-success mt-2">Finished</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Active Batches -->
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Active Batches</span>
+                        <div class="kpi-icon bg-purple-subtle text-purple"><i class="fa-solid fa-layer-group"></i></div>
+                    </div>
+                    <h4 class="kpi-value mt-2 mb-0" id="kpiActiveBatches">{{ stats.active_batches }}</h4>
+                    <span class="badge bg-light text-secondary mt-2">Stage Stepper</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Low Stock Items -->
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Low Stock Items</span>
+                        <div class="kpi-icon bg-danger-subtle text-danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    </div>
+                    <h4 class="kpi-value mt-2 mb-0" id="kpiLowStock">{{ stats.low_stock_count }}</h4>
+                    <span class="badge bg-danger-subtle text-danger mt-2">Requires Reorder</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Production Efficiency -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Production Efficiency</span>
+                        <div class="kpi-icon bg-primary-subtle text-primary"><i class="fa-solid fa-gauge-high"></i></div>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2 mt-2">
+                        <h4 class="kpi-value mb-0">{{ stats.production_efficiency }}%</h4>
+                        <span class="text-success small fw-semibold"><i class="fa-solid fa-arrow-up me-1"></i>+2.4%</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ stats.production_efficiency }}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. Quality Pass Rate -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Quality Pass Rate</span>
+                        <div class="kpi-icon bg-success-subtle text-success"><i class="fa-solid fa-shield-halved"></i></div>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2 mt-2">
+                        <h4 class="kpi-value mb-0">{{ stats.quality_pass_rate }}%</h4>
+                        <span class="badge bg-success-subtle text-success">Target >= 90%</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.quality_pass_rate }}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. Shipments in Transit -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label">Shipments in Transit</span>
+                        <div class="kpi-icon bg-info-subtle text-info"><i class="fa-solid fa-truck-fast"></i></div>
+                    </div>
+                    <h4 class="kpi-value mt-2 mb-0">{{ stats.shipments_in_transit }}</h4>
+                    <span class="badge bg-info-subtle text-info mt-2">Outbound Delivery</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10. Inventory Value in ₹ -->
+        <div class="col-xl-3 col-lg-12 col-md-6">
+            <div class="card kpi-card border-0 shadow-sm bg-dark text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="kpi-label text-light">Total Inventory Value</span>
+                        <div class="kpi-icon bg-white text-dark"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                    </div>
+                    <h3 class="kpi-value mt-2 mb-0 text-warning">{{ stats.formatted_inventory_value }}</h3>
+                    <span class="badge bg-secondary mt-2">Raw Material Asset Value</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts & Tables Row -->
+    <div class="row g-3 mb-4">
+        <!-- Production Order Status Chart -->
+        <div class="col-xl-6 col-lg-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-3">
+                    <h6 class="fw-bold mb-0"><i class="fa-solid fa-chart-donut me-2 text-primary"></i>Production Orders Status</h6>
+                    <a href="{{ url_for('production.index') }}" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                </div>
+                <div class="card-body">
+                    <div style="height: 260px;" class="d-flex justify-content-center">
+                        <canvas id="dashboardStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Alerts Table -->
+        <div class="col-xl-6 col-lg-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-3">
+                    <h6 class="fw-bold mb-0 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Low Stock Inventory Alerts</h6>
+                    <a href="{{ url_for('inventory.index') }}" class="btn btn-sm btn-outline-danger">Inventory Table</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Material</th>
+                                    <th>Current Stock</th>
+                                    <th>Min Threshold</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if stats.low_stock_materials %}
+                                    {% for mat in stats.low_stock_materials %}
+                                    <tr>
+                                        <td>
+                                            <span class="fw-bold text-dark">{{ mat.name }}</span>
+                                            <span class="d-block text-muted micro">{{ mat.material_id }}</span>
+                                        </td>
+                                        <td><span class="fw-semibold text-danger">{{ mat.quantity }} {{ mat.unit }}</span></td>
+                                        <td>{{ mat.minimum_level }} {{ mat.unit }}</td>
+                                        <td>
+                                            {% if mat.status == 'CRITICAL' %}
+                                            <span class="badge bg-danger">CRITICAL</span>
+                                            {% else %}
+                                            <span class="badge bg-warning text-dark">LOW</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('inventory.index') }}?search={{ mat.material_id }}" class="btn btn-xs btn-outline-primary">Reorder</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            <i class="fa-solid fa-circle-check text-success display-6 mb-2 d-block"></i>
+                                            All inventory levels are healthy!
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Widgets Grid -->
+    <div class="row g-3">
+        <!-- Active Batches Stepper Widget -->
+        <div class="col-xl-6 col-lg-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-3">
+                    <h6 class="fw-bold mb-0"><i class="fa-solid fa-layer-group me-2 text-purple"></i>Active Production Batches</h6>
+                    <a href="{{ url_for('batches.index') }}" class="btn btn-sm btn-link text-decoration-none">Batch Stepper</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for b in stats.active_batch_list %}
+                        <div class="list-group-item p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div>
+                                    <span class="fw-bold text-dark">{{ b.batch_id }}</span>
+                                    <span class="text-muted ms-2">({{ b.product_name }})</span>
+                                </div>
+                                <span class="badge bg-primary">{{ b.current_stage }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted mb-2">
+                                <span>Supervisor: {{ b.supervisor }}</span>
+                                <span>Target: {{ b.target_quantity }} units</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-purple" role="progressbar" style="width: {{ b.progress_pct }}%;"></div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">No active production batches.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="col-xl-6 col-lg-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-3">
+                    <h6 class="fw-bold mb-0"><i class="fa-solid fa-receipt me-2 text-info"></i>Recent Inventory Transactions</h6>
+                    <a href="{{ url_for('inventory.transactions') }}" class="btn btn-sm btn-link text-decoration-none">Transaction Log</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Txn ID</th>
+                                    <th>Material</th>
+                                    <th>Type</th>
+                                    <th>Qty</th>
+                                    <th>User</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in stats.recent_transactions %}
+                                <tr>
+                                    <td class="fw-semibold text-dark">{{ t.transaction_id }}</td>
+                                    <td>{{ t.material_name }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ t.transaction_type }}</span></td>
+                                    <td class="fw-bold">{{ t.quantity }} {{ t.material_unit }}</td>
+                                    <td class="small">{{ t.user_id }}</td>
+                                    <td class="small text-muted">{{ t.created_at[:10] }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="6" class="text-center py-4 text-muted">No recent transactions.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        initDashboardCharts();
+    });
+</script>
+{% endblock %}
